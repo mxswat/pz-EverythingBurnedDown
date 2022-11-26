@@ -1,0 +1,5 @@
+version=1
+title=EverythingBurnedDown
+description=This is the description of EverythingBurnedDown.
+tags=
+visibility=public
