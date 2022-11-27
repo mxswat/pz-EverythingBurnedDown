@@ -5,55 +5,52 @@ local EBD = {
 
 function EBD:getBurnedDownStory()
     if self.RBBurntDef ~= nil then
-        -- print('cached RBBurntDef')
         return self.RBBurntDef
     end
 
     for i = 0, getWorld():getRandomizedBuildingList():size() - 1 do
         local rb = getWorld():getRandomizedBuildingList():get(i);
         if rb and rb:getName() == "Burnt" then
-            -- print('rb:getName(): ', rb:getName())
             return rb
         end
     end
 end
 
+function EBD:isSquareInTownZone(square)
+    local zone = square:getZone() and square:getZone():getType()
+    return zone == "TownZone"
+end
+
 function EBD:burnItAllDown(square)
+
     local buildingKeyIDs = ModData.getOrCreate(EDB_ModDataKey)
+    if isClient() then
+        return -- Must return on client!
+    end
 
     if not square then
         return
     end
 
-    local x = square:getX()
-    local y = square:getY()
-
-
-    if isClient() then
-        return
-    end
-
-    local building = square:getBuilding()
-    if not building then
-        return
-    end
-
-    local buildingDef = building:getDef()
-    if not buildingDef:isFullyStreamedIn() then
-        return
-    end
-
+    local squareId = square:getX() .. ',' .. square:getY()
     -- Ignore if it's cached
-    if buildingKeyIDs[buildingDef:getKeyId()] then
+    if buildingKeyIDs[squareId] then
         return
     end
 
-    print('burn down building in square [x: ' .. x .. ', y:' .. y .. '], with ID: '..tostring(buildingDef:getKeyId()))
+    if not self:isSquareInTownZone(square) then
+        return
+    end
 
-    buildingKeyIDs[buildingDef:getKeyId()] = true
+    square:Burn(false)
+
+    buildingKeyIDs[squareId] = true
     ModData.add(EDB_ModDataKey, buildingKeyIDs)
 
-    self.RBBurntDef:randomizeBuilding(buildingDef);
+    local aboveCell = getCell():getGridSquare(square:getX(), square:getY(), square:getZ() + 1);
+    if aboveCell then
+        self:burnItAllDown(aboveCell)
+    end
 end
 
 function EBD:LoadGridsquare(square)
