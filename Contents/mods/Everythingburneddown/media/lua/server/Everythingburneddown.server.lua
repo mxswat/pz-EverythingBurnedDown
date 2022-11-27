@@ -1,5 +1,6 @@
+local EDB_ModDataKey = "EBD_BuildingKeyIds"
 local EBD = {
-    RBBurntDef = nil
+    RBBurntDef = nil,
 }
 
 function EBD:getBurnedDownStory()
@@ -18,6 +19,8 @@ function EBD:getBurnedDownStory()
 end
 
 function EBD:burnItAllDown(square)
+    local buildingKeyIDs = ModData.getOrCreate(EDB_ModDataKey)
+
     if not square then
         return
     end
@@ -35,19 +38,20 @@ function EBD:burnItAllDown(square)
         return
     end
 
-    -- randomizeBuilding(BuildingDef var1) inside RBBurnt, will set building to all explored
-    -- maybe use buildingDef:getKeyId() and globbal mod data to store it between restarts instead of isAllExplored
-    if building:isAllExplored() then
-        return
-    end
-    
     local buildingDef = building:getDef()
     if not buildingDef:isFullyStreamedIn() then
         return
     end
 
+    -- Ignore if it's cached
+    if buildingKeyIDs[buildingDef:getKeyId()] then
+        return
+    end
 
-    print('burn down building in square [x: ' .. x .. ', y:' .. y .. ']')
+    print('burn down building in square [x: ' .. x .. ', y:' .. y .. '], with ID: '..tostring(buildingDef:getKeyId()))
+
+    buildingKeyIDs[buildingDef:getKeyId()] = true
+    ModData.add(EDB_ModDataKey, buildingKeyIDs)
 
     self.RBBurntDef:randomizeBuilding(buildingDef);
 end
