@@ -55,6 +55,7 @@ const drawLine = ({ x0, x1, y, matrix }) => {
     matrix[Math.round(y)] = matrix[Math.round(y)].fill('X', Math.round(x1), Math.round(x0))
     // matrix[Math.round(y)][Math.round(x1)] = '1'
     // matrix[Math.round(y)][Math.round(x0)] = '0'
+    console.log({x1, x0})
 }
 
 const fillCircle = ({ cx, cy, radius, matrix }) => {
