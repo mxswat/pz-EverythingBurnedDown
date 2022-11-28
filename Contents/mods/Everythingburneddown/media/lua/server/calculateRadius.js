@@ -51,10 +51,10 @@ insideCircle()
 
 // ----------------------------------
 
-// Matrix is
-
 const drawLine = ({ x0, x1, y, matrix }) => {
-    matrix[Math.round(y + 0.5)] = matrix[Math.round(y + 0.5)].fill('X', Math.round(x1), Math.round(x0 + 1))
+    matrix[Math.round(y)] = matrix[Math.round(y)].fill('X', Math.round(x1), Math.round(x0))
+    // matrix[Math.round(y)][Math.round(x1)] = '1'
+    // matrix[Math.round(y)][Math.round(x0)] = '0'
 }
 
 const fillCircle = ({ cx, cy, radius, matrix }) => {
@@ -89,7 +89,7 @@ const fillCircle = ({ cx, cy, radius, matrix }) => {
 }
 
 const size = 21
-const matrix = Array.from({ length: 21 }, e => Array(21).fill('.'));
+const matrix = Array.from({ length: size }, e => Array(size).fill('.'));
 fillCircle({
     cx: (size / 2) - 1,
     cy: (size / 2) - 1,
