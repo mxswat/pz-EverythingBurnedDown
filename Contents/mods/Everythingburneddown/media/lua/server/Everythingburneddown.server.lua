@@ -1,63 +1,75 @@
-local EDB_ModDataKey = "EBD_BuildingKeyIds"
+local muldraughCenterX = 10749
+local muldraughCenterY = 9944
+local muldraughRadius = 600
+
 local EBD = {
-    RBBurntDef = nil,
+    ModDataKey = "EBD_BuildingKeyIds"
 }
 
-function EBD:getBurnedDownStory()
-    if self.RBBurntDef ~= nil then
-        return self.RBBurntDef
-    end
 
-    for i = 0, getWorld():getRandomizedBuildingList():size() - 1 do
-        local rb = getWorld():getRandomizedBuildingList():get(i);
-        if rb and rb:getName() == "Burnt" then
-            return rb
-        end
-    end
+local function normalizeRadius(val, max, min)
+    return (val - min) / (max - min)
 end
 
-function EBD:isSquareInTownZone(square)
-    local zone = square:getZone() and square:getZone():getType()
-    return zone == "TownZone"
+function EBD:squareDistanceFromExplosion(square)
+    local x = square:getX();
+    local y = square:getY();
+    local xCalc = (x - muldraughCenterX) ^ 2
+    local yCalc = (y - muldraughCenterY) ^ 2
+    return math.sqrt(xCalc + yCalc);
 end
 
-function EBD:burnItAllDown(square)
+function EBD:isSquareInBurnedArea(square)
+    return self:squareDistanceFromExplosion(square) <= muldraughRadius;
+end
 
-    local buildingKeyIDs = ModData.getOrCreate(EDB_ModDataKey)
-    if isClient() then
-        return -- Must return on client!
-    end
-
+function EBD:burnItAllDown(square, skipId)
     if not square then
         return
     end
 
+    local buildingKeyIDs = ModData.getOrCreate(self.ModDataKey)
+
+    -- Ignore if it's cached or skipping
     local squareId = square:getX() .. ',' .. square:getY()
-    -- Ignore if it's cached
-    if buildingKeyIDs[squareId] then
+    if not skipId and buildingKeyIDs[squareId] then
         return
     end
 
-    if not self:isSquareInTownZone(square) then
+    local squareDistanceFromExp = self:squareDistanceFromExplosion(square)
+    if squareDistanceFromExp > muldraughRadius then
         return
     end
 
-    square:Burn(false)
-
+    -- Passed radius check, mark it as checked
     buildingKeyIDs[squareId] = true
-    ModData.add(EDB_ModDataKey, buildingKeyIDs)
+    ModData.add(self.ModDataKey, buildingKeyIDs)
 
+    if ZombRand(100) <= normalizeRadius(squareDistanceFromExp, 0, muldraughRadius) * 100 then
+        square:Burn(false)
+    end
+
+
+    local building = square:getBuilding()
+    if not building then
+        return
+    end
+
+    -- Ignore Z checks if the tile is not in a building
     local aboveCell = getCell():getGridSquare(square:getX(), square:getY(), square:getZ() + 1);
     if aboveCell then
-        self:burnItAllDown(aboveCell)
+        self:burnItAllDown(aboveCell, true)
     end
 end
 
 function EBD:LoadGridsquare(square)
-    self.RBBurntDef = self:getBurnedDownStory()
     self:burnItAllDown(square)
 end
 
 Events.LoadGridsquare.Add(function(square)
+    if isClient() then
+        return -- Must return on client!
+    end
+
     EBD:LoadGridsquare(square)
 end);
