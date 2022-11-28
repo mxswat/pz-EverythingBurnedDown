@@ -53,10 +53,9 @@ local function generateExplosionCircle(cx, cy, radius)
 end
 
 local exp = explosionsList[1]
-
 generateExplosionCircle(exp.x, exp.y, exp.r)
 
-Events.LoadGridsquare.Add(function(square)
+local function BurnOnLoadGridSquare(square)
     if isClient() then
         return -- Must return on client!
     end
@@ -81,4 +80,12 @@ Events.LoadGridsquare.Add(function(square)
     end
 
     floor:setSpriteFromName("floors_burnt_01_0");
-end);
+
+    -- Burn buildings
+    -- local aboveCell = getCell():getGridSquare(square:getX(), square:getY(), square:getZ() + 1);
+    -- if aboveCell then
+    --     self:burnItAllDown(aboveCell, true)
+    -- end
+end
+
+Events.LoadGridsquare.Add(BurnOnLoadGridSquare);
