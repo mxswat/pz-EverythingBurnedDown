@@ -1,18 +1,17 @@
 local explosionsList = {
-    { -- muldraugh
+    { -- muldraugh https://map.projectzomboid.com/#10753x9943x1145
         x = 10749,
         y = 9944,
-        r = 10
+        r = 100
     }
 }
 
-local markedSquares = {}
-
+local SquaresInExplosion = {}
 local function markSquares(x0, x1, y)
     -- {x1: 7.5, x0: 11.5}
-    markedSquares[y] = markedSquares[y] or {}
+    SquaresInExplosion[y] = SquaresInExplosion[y] or {}
 
-    local squares = markedSquares[y]
+    local squares = SquaresInExplosion[y]
     for i = x1, x0, 1 do
         squares[i] = false
     end
@@ -55,7 +54,28 @@ end
 local exp = explosionsList[1]
 generateExplosionCircle(exp.x, exp.y, exp.r)
 
-local function BurnOnLoadGridSquare(square)
+local ModDataIgnoreKey = "MxBurnedDown"
+
+local function BurnSquare(square)
+    square:Burn(false)
+
+    square:getModData()[ModDataIgnoreKey] = true;
+
+    -- Make sprite crispy if on ground floor
+    local floor = square:getFloor();
+    if not floor or square:getZ() > 0 then
+        return
+    end
+    floor:setSpriteFromName("floors_burnt_01_0");
+
+    -- Burn multi floor buildings
+    local upperSquare = getCell():getGridSquare(square:getX(), square:getY(), square:getZ() + 1);
+    if upperSquare then
+        BurnSquare(upperSquare)
+    end
+end
+
+local function OnLoadGridSquare(square)
     if isClient() then
         return -- Must return on client!
     end
@@ -64,28 +84,19 @@ local function BurnOnLoadGridSquare(square)
         return
     end
 
-    if markedSquares[square:getY()] == nil then
+    if SquaresInExplosion[square:getY()] == nil then
         return
     end
 
-    if markedSquares[square:getY()][square:getX()] == nil then
+    if SquaresInExplosion[square:getY()][square:getX()] == nil then
         return
     end
 
-    square:Burn(false)
-
-    local floor = square:getFloor();
-    if not floor then
+    if square:getModData()[ModDataIgnoreKey] then
         return
     end
 
-    floor:setSpriteFromName("floors_burnt_01_0");
-
-    -- Burn buildings
-    -- local aboveCell = getCell():getGridSquare(square:getX(), square:getY(), square:getZ() + 1);
-    -- if aboveCell then
-    --     self:burnItAllDown(aboveCell, true)
-    -- end
+    BurnSquare(square)
 end
 
-Events.LoadGridsquare.Add(BurnOnLoadGridSquare);
+Events.LoadGridsquare.Add(OnLoadGridSquare);

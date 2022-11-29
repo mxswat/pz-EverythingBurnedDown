@@ -1,99 +1,31 @@
-'use strict';
+const printGrid = (grid) => {
+    console.log(grid.map((x) => x.join('')).join('\n'))
+}
 
-function insideCircle() {
-    let size = 11
-    let pzMap = Array(size).fill(Array(size).fill(" "));
-    const circleX = 5
-    const circleY = 5
-    const circleRadius = 4
-    console.log({
-        size,
-        circleX,
-        circleY,
-        circleRadius,
-    })
-    const isInsideCircle = (x, y) => {
-        // NOTE: not using <=, using <
-        return Math.sqrt(Math.pow(x - circleX, 2) + Math.pow((y - circleY), 2)) < circleRadius;
+const drawAxes = (grid) => {
+    const width = grid[0].length
+    const height = grid.length
+
+    let hw = Math.floor(width / 2);
+    let hh = Math.floor(height / 2)
+
+    for (let i = 0; i < width; i++) {
+        grid[hh][i] = '-'
+    }
+    for (let i = 0; i < width; i++) {
+        grid[i][hw] = '|'
     }
 
-    const editedMap = pzMap.map((row, x) => {
-        return row.map((col, y) => {
-            if (x == circleX && y == circleY) {
-                return 'O'
-            }
-            if (isInsideCircle(x, y)) {
-                return 'X'
-            }
-            return '.'
-        })
-    })
-
-    const output = editedMap.map((x) => x.join('')).join('\n')
-    console.log(editedMap)
-    console.log(output)
-}
-insideCircle()
-
-// ......X......
-// ...XXXXXXX...
-// ..XXXXXXXXX..
-// .XXXXXXXXXXX.
-// .XXXXXXXXXXX.
-// .XXXXXXXXXXX.
-// XXXXXXOXXXXXX
-// .XXXXXXXXXXX.
-// .XXXXXXXXXXX.
-// .XXXXXXXXXXX.
-// ..XXXXXXXXX..
-// ...XXXXXXX...
-// ......X......
-
-// ----------------------------------
-
-const drawLine = ({ x0, x1, y, matrix }) => {
-    matrix[Math.round(y)] = matrix[Math.round(y)].fill('X', Math.round(x1), Math.round(x0))
-    // matrix[Math.round(y)][Math.round(x1)] = '1'
-    // matrix[Math.round(y)][Math.round(x0)] = '0'
-    console.log({x1, x0})
+    grid[hh][hw] = '+'
 }
 
-const fillCircle = ({ cx, cy, radius, matrix }) => {
-    let x = radius - 1
-    let y = 0
-    let dx = 1
-    let dy = 1
-    let err = dx - (radius << 1)
+const drawCircle = (x, y, r, c) => {
 
-    while (x >= y) {
-        drawLine({ x0: cx + y, x1: cx - y, y: cy - x, matrix })
-        drawLine({ x0: cx + x, x1: cx - x, y: cy - y, matrix })
-        drawLine({ x0: cx + x, x1: cx - x, y: cy + y, matrix })
-        drawLine({ x0: cx + y, x1: cx - y, y: cy + x, matrix })
-
-        if (err <= 0) {
-            y++
-            err += dy
-            dy += 2
-        }
-
-        if (err > 0) {
-            x--
-            dx += 2
-            err += dx - (radius << 1)
-        }
-
-        console.log({x, y, err})
-    }
-
-    console.log(matrix.map((x) => x.join('')).join('\n'))
 }
 
-const size = 21
-const matrix = Array.from({ length: size }, e => Array(size).fill('.'));
-fillCircle({
-    cx: (size / 2) - 1,
-    cy: (size / 2) - 1,
-    radius: 6,
-    matrix,
-})
+
+const size = 25
+const grid = Array.from({ length: size }, e => Array(size).fill("·"));
+
+drawAxes(grid)
+printGrid(grid)
