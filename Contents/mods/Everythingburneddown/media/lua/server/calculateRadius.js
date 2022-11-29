@@ -24,6 +24,32 @@ const drawPixel = (grid, x, y, c) => {
     grid[y][x] = c
 }
 
+// const drawCircle = (buffer, cx, cy, radius) => {
+//     let error = -radius;
+//     let x = radius;
+//     let y = 0;
+
+//     while (x >= y) {
+//         let lastY = y;
+
+//         error += y;
+//         ++y;
+//         error += y;
+
+//         plot4points(buffer, cx, cy, x, lastY);
+
+//         if (error >= 0) {
+//             if (x != lastY)
+//                 plot4points(buffer, cx, cy, lastY, x);
+
+//             error -= x;
+//             --x;
+//             error -= x;
+//         }
+//     }
+// }
+
+
 const drawCircle = (grid, x, y, r, c) => {
     let dx = r
     let dy = 0
@@ -40,16 +66,14 @@ const drawCircle = (grid, x, y, r, c) => {
         drawPixel(grid, x - dy, y - dx, c)
         printGrid(grid)
         dy = dy + 1
+
+        if (err < 0) {
+            err = err + 2 * dy + 1;
+        } else {
+            dx = dx - 1;
+            err = err + 2 * (dy - dx) + 1;
+        }
     }
-
-    if (err < 0) {
-        err = err + 2 * dy + 1
-
-    } else {
-        dx = dx - 1
-        err = err + 2 * (dy - dx) + 1
-    }
-
 }
 
 
