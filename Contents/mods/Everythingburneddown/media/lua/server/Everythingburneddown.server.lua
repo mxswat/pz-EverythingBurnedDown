@@ -6,6 +6,21 @@ local explosionsList = {
     }
 }
 
+local function BurnMax(square)
+    local floor = square:getFloor();
+    square:Burn(true)
+    square:ClearTileObjectsExceptFloor()
+    if not floor or square:getZ() > 0 then
+        return
+    end
+    floor:setSpriteFromName("floors_burnt_01_0");
+end
+
+local function BurnSimple(square)
+    -- Use square:getContainerItem() to roll the dice and maybe save the tile
+    square:Burn(true)
+end
+
 local function normalize(val, max, min)
     return (val - min) / (max - min)
 end
@@ -16,8 +31,24 @@ local function squareDistanceFromExplosion(x, y, cx, cy)
     return math.sqrt(xCalc + yCalc);
 end
 
+local function calcSquareMark(normalizeDistance)
+    local rand50 = ZombRand(2) == 0
+    if normalizeDistance <= 0.3 then
+        return BurnMax
+    end
+    if normalizeDistance <= 0.4 then
+        return rand50 and BurnMax or BurnSimple
+    end
+    if normalizeDistance <= 0.75 then
+        return BurnSimple
+    end
+    if normalizeDistance >= 0.75 then
+        return rand50 and BurnSimple or nil
+    end
+end
+
 local SquaresInExplosion = {}
-local function markSquares(x0, x1, y, cx, cy, r)
+local function markSquareRow(x0, x1, y, cx, cy, r)
     -- {x1: 7.5, x0: 11.5}
     SquaresInExplosion[y] = SquaresInExplosion[y] or {}
 
@@ -27,7 +58,7 @@ local function markSquares(x0, x1, y, cx, cy, r)
         local normalizeDistance = normalize(distance, r, 0)
         -- print('distance: ' .. distance .. ' normalizeDistance: ' .. normalizeDistance)
 
-        squares[i] = normalizeDistance
+        squares[i] = calcSquareMark(normalizeDistance)
     end
 end
 
@@ -43,10 +74,10 @@ local function generateExplosionCircle(cx, cy, radius)
     local err = dx - lshift(radius, 1)
 
     while x >= y do
-        markSquares(cx + y, cx - y, cy - x, cx, cy, radius)
-        markSquares(cx + x, cx - x, cy - y, cx, cy, radius)
-        markSquares(cx + x, cx - x, cy + y, cx, cy, radius)
-        markSquares(cx + y, cx - y, cy + x, cx, cy, radius)
+        markSquareRow(cx + y, cx - y, cy - x, cx, cy, radius)
+        markSquareRow(cx + x, cx - x, cy - y, cx, cy, radius)
+        markSquareRow(cx + x, cx - x, cy + y, cx, cy, radius)
+        markSquareRow(cx + y, cx - y, cy + x, cx, cy, radius)
 
         if (err <= 0) then
             y = y + 1
@@ -71,24 +102,15 @@ generateExplosionCircle(ceil(exp.x), ceil(exp.y), ceil(exp.r))
 
 local ModDataIgnoreKey = "MxBurnedDown"
 
-local function BurnSquare(square, distance)
+local function BurnSquare(square, explosionEffect)
     square:getModData()[ModDataIgnoreKey] = true;
 
-    -- Make sprite crispy if on ground floor
-    local floor = square:getFloor();
-    if not floor or square:getZ() > 0 then
-        return
+    -- Apprently it's needed because of Java shitting itself and randomly dumping "local2" error
+    if not IsoFire.CanAddFire(square, true) then
+        return 
     end
-    if distance <= 0.3 then
-        square:Burn(false)
-        floor:setSpriteFromName("floors_burnt_01_0");
-    end
-    if distance <= 0.75 then
-        square:Burn(false)
-    end
-    if distance >= 0.75 and ZombRand(2) == 0 then
-        square:Burn(false)
-    end
+
+    explosionEffect(square)
 end
 
 local function OnLoadGridSquare(square)
