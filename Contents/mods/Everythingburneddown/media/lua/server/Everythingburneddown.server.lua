@@ -8,22 +8,18 @@ local explosionsList = {
 
 -- Todo, check (not square:isOutside())
 -- Todo check var11.getSprite().getName().startsWith("blends_natural")
+-- Note, IsoCell is in charge of spawing all the IsoGridSquare
 
+-- This remove everything on the square and sets it floor to burnt
 local function BurnMax(square)
-    local floor = square:getFloor();
-    square:Burn(true)
-
-    local objects = square:getLuaTileObjectList();
-    for _, object in ipairs(objects) do
-        if object ~= floor then
-            square:transmitRemoveItemFromSquare(object)
-        end
-    end
-
-    if not floor or square:getZ() > 0 then
+    square:getObjects():clear();
+    square:getSpecialObjects():clear();
+    if square:getZ() > 0 then
         return
     end
-    floor:setSpriteFromName("floors_burnt_01_0");
+    
+    square:addFloor("floors_burnt_01_0")
+    square:Burn(true)
 end
 
 local function BurnSimple(square)
