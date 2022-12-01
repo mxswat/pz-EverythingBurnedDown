@@ -10,6 +10,23 @@ local explosionsList = {
 -- Todo check var11.getSprite().getName().startsWith("blends_natural")
 -- Note, IsoCell is in charge of spawing all the IsoGridSquare
 
+local scripts = getScriptManager():getAllVehicleScripts()
+local burntCars = {}
+for i = 1, scripts:size() do
+    local script = scripts:get(i - 1)
+    if script:getPartCount() == 0 then
+        table.insert(burntCars, script:getFullName())
+    end
+end
+
+local function setRandomBurntVehicleScript(vehicle)
+    local scriptName = burntCars[ZombRand(#burntCars) + 1]
+	vehicle:setScriptName(scriptName)
+	vehicle:scriptReloaded()
+	vehicle:setSkinIndex(ZombRand(vehicle:getSkinCount()))
+	vehicle:repair() -- so engine loudness/power/quality are recalculated
+end
+
 -- This remove everything on the square and sets it floor to burnt
 local function BurnMax(square)
     square:getObjects():clear();
@@ -17,9 +34,16 @@ local function BurnMax(square)
     if square:getZ() > 0 then
         return
     end
-    
+
     square:addFloor("floors_burnt_01_0")
     square:Burn(true)
+
+    local vehicle = square:getVehicleContainer()
+    if not vehicle then
+        return
+    end
+
+    setRandomBurntVehicleScript(vehicle)
 end
 
 local function BurnSimple(square)
@@ -48,9 +72,9 @@ local function squareDistanceFromExplosion(x, y, cx, cy)
 end
 
 local function calcSquareMark(normalizeDistance)
-    local destroyedRange = 0.25 -- Everything burned down
-    local destroyedOrBurnedRange = 0.5 -- Gradient between all destroyed, and vanilla burn
-    local burnedRange = 0.75 -- Just burn 
+    local destroyedRange = 0.20 -- Everything burned down
+    local destroyedOrBurnedRange = 0.55 -- Gradient between all destroyed, and vanilla burn
+    local burnedRange = 0.75 -- Just burn
     local burnedOrIntactRange = 1
     if normalizeDistance <= destroyedRange then
         return BurnMax -- Destroy all
@@ -70,14 +94,12 @@ end
 
 local SquaresInExplosion = {}
 local function markSquareRow(x0, x1, y, cx, cy, r)
-    -- {x1: 7.5, x0: 11.5}
     SquaresInExplosion[y] = SquaresInExplosion[y] or {}
 
     local squares = SquaresInExplosion[y]
     for i = x1, x0, 1 do
         local distance = squareDistanceFromExplosion(i, y, cx, cy)
         local normalizeDistance = normalize(distance, r, 0)
-        -- print('distance: ' .. distance .. ' normalizeDistance: ' .. normalizeDistance)
 
         squares[i] = calcSquareMark(normalizeDistance)
     end
