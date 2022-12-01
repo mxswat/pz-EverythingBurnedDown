@@ -2,14 +2,24 @@ local explosionsList = {
     { -- muldraugh https://map.projectzomboid.com/#10753x9943x1145
         x = 10749,
         y = 9944,
-        r = 50
+        r = 100
     }
 }
+
+-- Todo, check (not square:isOutside())
+-- Todo check var11.getSprite().getName().startsWith("blends_natural")
 
 local function BurnMax(square)
     local floor = square:getFloor();
     square:Burn(true)
-    square:ClearTileObjectsExceptFloor()
+
+    local objects = square:getLuaTileObjectList();
+    for _, object in ipairs(objects) do
+        if object ~= floor then
+            square:transmitRemoveItemFromSquare(object)
+        end
+    end
+
     if not floor or square:getZ() > 0 then
         return
     end
@@ -19,6 +29,16 @@ end
 local function BurnSimple(square)
     -- Use square:getContainerItem() to roll the dice and maybe save the tile
     square:Burn(true)
+
+    -- Remove Grass
+    for i = square:getObjects():size(), 1, -1 do
+        local object = square:getObjects():get(i - 1)
+        if object:getProperties() and object:getProperties():Is(IsoFlagType.canBeRemoved) then
+            square:transmitRemoveItemFromSquare(object)
+            -- Save loops, asusme it's grass and return
+            return
+        end
+    end
 end
 
 local function normalize(val, max, min)
@@ -32,18 +52,23 @@ local function squareDistanceFromExplosion(x, y, cx, cy)
 end
 
 local function calcSquareMark(normalizeDistance)
-    local rand50 = ZombRand(2) == 0
-    if normalizeDistance <= 0.3 then
-        return BurnMax
+    local destroyedRange = 0.25 -- Everything burned down
+    local destroyedOrBurnedRange = 0.5 -- Gradient between all destroyed, and vanilla burn
+    local burnedRange = 0.75 -- Just burn 
+    local burnedOrIntactRange = 1
+    if normalizeDistance <= destroyedRange then
+        return BurnMax -- Destroy all
     end
-    if normalizeDistance <= 0.4 then
-        return rand50 and BurnMax or BurnSimple
+    if normalizeDistance <= destroyedOrBurnedRange then
+        local chanceNormalize = normalize(normalizeDistance, destroyedOrBurnedRange, destroyedRange) * 100
+        return chanceNormalize <= ZombRand(100) and BurnMax or BurnSimple
     end
-    if normalizeDistance <= 0.75 then
+    if normalizeDistance <= burnedRange then
         return BurnSimple
     end
-    if normalizeDistance >= 0.75 then
-        return rand50 and BurnSimple or nil
+    if normalizeDistance <= burnedOrIntactRange then
+        local chanceNormalize = normalize(normalizeDistance, burnedOrIntactRange, burnedRange) * 100
+        return chanceNormalize <= ZombRand(100) and BurnSimple or nil
     end
 end
 
@@ -107,7 +132,7 @@ local function BurnSquare(square, explosionEffect)
 
     -- Apprently it's needed because of Java shitting itself and randomly dumping "local2" error
     if not IsoFire.CanAddFire(square, true) then
-        return 
+        return
     end
 
     explosionEffect(square)
