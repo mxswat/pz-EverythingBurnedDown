@@ -23,11 +23,15 @@ local function OnLoadGridSquare(square)
         return
     end
 
-    if SquaresInExplosion[square:getY()] == nil then
+    local X = square: getX()
+    local Y = square: getY()
+    local Z = square: getZ()
+
+    if SquaresInExplosion[Y] == nil then
         return
     end
 
-    local explosionEffect = SquaresInExplosion[square:getY()][square:getX()]
+    local explosionEffect = SquaresInExplosion[Y][X]
     if explosionEffect == nil then
         return
     end
@@ -39,7 +43,7 @@ local function OnLoadGridSquare(square)
     BurnSquare(square, explosionEffect)
 
     -- Burn multi floor buildings
-    local upperSquare = getCell():getGridSquare(square:getX(), square:getY(), square:getZ() + 1);
+    local upperSquare = getCell():getGridSquare(X, Y, Z + 1);
     if upperSquare then
         BurnSquare(upperSquare, explosionEffect)
     end

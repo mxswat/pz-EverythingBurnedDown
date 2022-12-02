@@ -47,9 +47,13 @@ local ceil = math.ceil
 -- Note, IsoCell is in charge of spawing all the IsoGridSquare
 
 -- This remove everything on the square and sets it floor to burnt
-local function BurnMax(square)
+local function burnAndDestroy(square)
     square:getObjects():clear();
     square:getSpecialObjects():clear();
+
+    -- Remove room to avoid black square in the map where a building was
+    square:setRoomID(-1)
+
     if square:getZ() > 0 then
         return
     end
@@ -63,9 +67,6 @@ local function BurnMax(square)
     end
 
     setRandomBurntVehicleScript(vehicle)
-
-    -- Remove room to avoid black square in the map where a building was
-    square:setRoomID(-1)
 end
 
 local function BurnSimple(square)
@@ -90,11 +91,11 @@ local function calcSquareMark(normalizeDistance)
     local burnedRange = 0.75 -- Just burn
     local burnedOrIntactRange = 1
     if normalizeDistance <= destroyedRange then
-        return BurnMax -- Destroy all
+        return burnAndDestroy -- Destroy all
     end
     if normalizeDistance <= destroyedOrBurnedRange then
         local chanceNormalize = normalize(normalizeDistance, destroyedOrBurnedRange, destroyedRange) * 100
-        return chanceNormalize <= ZombRand(100) and BurnMax or BurnSimple
+        return chanceNormalize <= ZombRand(100) and burnAndDestroy or BurnSimple
     end
     if normalizeDistance <= burnedRange then
         return BurnSimple
