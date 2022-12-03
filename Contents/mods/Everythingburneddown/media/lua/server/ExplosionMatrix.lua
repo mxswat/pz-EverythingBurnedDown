@@ -1,3 +1,7 @@
+local utils = require('EBD_Utils')
+
+local table_bininsert = utils.table_bininsert
+
 local explosionsList = {
     { -- muldraugh https://map.projectzomboid.com/#10753x9943x1145
         x = 10749,
@@ -32,10 +36,10 @@ end
 
 local function setRandomBurntVehicleScript(vehicle)
     local scriptName = BurntVehicleScripts[ZombRand(#BurntVehicleScripts) + 1]
-	vehicle:setScriptName(scriptName)
-	vehicle:scriptReloaded()
-	vehicle:setSkinIndex(ZombRand(vehicle:getSkinCount()))
-	vehicle:repair() -- so engine loudness/power/quality are recalculated
+    vehicle:setScriptName(scriptName)
+    vehicle:scriptReloaded()
+    vehicle:setSkinIndex(ZombRand(vehicle:getSkinCount()))
+    vehicle:repair() -- so engine loudness/power/quality are recalculated
 end
 
 local ceil = math.ceil
@@ -107,6 +111,7 @@ local function calcSquareMark(normalizeDistance)
 end
 
 local SquaresInExplosion = {}
+local TempEmptySquares = {}
 
 local function markSquareRow(x0, x1, y, cx, cy, r)
     SquaresInExplosion[y] = SquaresInExplosion[y] or {}
@@ -117,6 +122,20 @@ local function markSquareRow(x0, x1, y, cx, cy, r)
         local normalizeDistance = normalize(distance, r, 0)
 
         squares[i] = calcSquareMark(normalizeDistance)
+
+        if squares[i] == nil then
+            table_bininsert(TempEmptySquares, {
+                x = i,
+                y = y,
+                d = normalizeDistance
+            }, function(a, b) return a.d < b.d end)
+        end
+    end
+end
+
+local function patchEmptySquares()
+    for _, square in ipairs(TempEmptySquares) do
+        print('square.d: '..square.d)        
     end
 end
 
@@ -147,6 +166,8 @@ local function generateExplosionCircle(cx, cy, radius)
     end
 
     print('generateExplosionCircle')
+
+    patchEmptySquares()
 end
 
 local exp = explosionsList[1]
@@ -154,7 +175,7 @@ local exp = explosionsList[1]
 generateExplosionCircle(ceil(exp.x), ceil(exp.y), ceil(exp.r))
 
 local module = {
-    getExplosionMatrix = function ()
+    getExplosionMatrix = function()
         return SquaresInExplosion
     end
 }
