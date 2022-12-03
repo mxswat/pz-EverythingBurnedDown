@@ -1,29 +1,11 @@
 local utils = require('EBD_Utils')
 
 local table_bininsert = utils.table_bininsert
+local normalize = utils.normalize
+local distanceFromCenterOfCircle = utils.distanceFromCenterOfCircle
+local lshift = utils.lshift
 
-local explosionsList = {
-    { -- muldraugh https://map.projectzomboid.com/#10753x9943x1145
-        x = 10749,
-        y = 9944,
-        r = 100
-    }
-}
-
-local function normalize(val, max, min)
-    return (val - min) / (max - min)
-end
-
-local function squareDistanceFromExplosion(x, y, cx, cy)
-    local xCalc = (x - cx) ^ 2
-    local yCalc = (y - cy) ^ 2
-    return math.sqrt(xCalc + yCalc);
-end
-
-local function lshift(x, by)
-    return x * 2 ^ by
-end
-
+local TempEmptySquares = {}
 local BurntVehicleScripts = {}
 
 local scripts = getScriptManager():getAllVehicleScripts()
@@ -42,28 +24,24 @@ local function setRandomBurntVehicleScript(vehicle)
     vehicle:repair() -- so engine loudness/power/quality are recalculated
 end
 
-local ceil = math.ceil
-
--- Utils End --
-
--- Todo, check (not square:isOutside())
--- Todo check var11.getSprite().getName().startsWith("blends_natural")
--- Note, IsoCell is in charge of spawing all the IsoGridSquare
-
--- This remove everything on the square and sets it floor to burnt
 local function burnAndDestroy(square)
     square:getObjects():clear();
     square:getSpecialObjects():clear();
 
-    -- Remove room to avoid black square in the map where a building was
-    square:setRoomID(-1)
+    local building = square:getBuilding()
+    if building then
+        building:setAllExplored(true);
+        -- setRoomID -> Remove room to avoid black square in the map where a building was
+        square:setRoomID(-1);
+    end
+
+    square:Burn(true)
 
     if square:getZ() > 0 then
         return
     end
 
     square:addFloor("floors_burnt_01_0")
-    square:Burn(true)
 
     local vehicle = square:getVehicleContainer()
     if not vehicle then
@@ -89,7 +67,21 @@ local function BurnSimple(square)
     end
 end
 
-local function calcSquareMark(normalizeDistance)
+local function patchEmptySquares()
+    for _, square in ipairs(TempEmptySquares) do
+        print('square.d: '..square.d)        
+    end
+end
+
+local ExplosionMatrix = {
+    SquaresInExplosion = {},
+}
+
+function ExplosionMatrix:getSquaresInExplosion()
+    return self.SquaresInExplosion
+end
+
+function ExplosionMatrix:calcSquareMark(normalizeDistance)
     local destroyedRange = 0.20 -- Everything burned down
     local destroyedOrBurnedRange = 0.55 -- Gradient between all destroyed, and vanilla burn
     local burnedRange = 0.75 -- Just burn
@@ -110,18 +102,15 @@ local function calcSquareMark(normalizeDistance)
     end
 end
 
-local SquaresInExplosion = {}
-local TempEmptySquares = {}
+function ExplosionMatrix:markSquareRow(x0, x1, y, cx, cy, r)
+    self.SquaresInExplosion[y] = self.SquaresInExplosion[y] or {}
 
-local function markSquareRow(x0, x1, y, cx, cy, r)
-    SquaresInExplosion[y] = SquaresInExplosion[y] or {}
-
-    local squares = SquaresInExplosion[y]
+    local squares = self.SquaresInExplosion[y]
     for i = x1, x0, 1 do
-        local distance = squareDistanceFromExplosion(i, y, cx, cy)
+        local distance = distanceFromCenterOfCircle(i, y, cx, cy)
         local normalizeDistance = normalize(distance, r, 0)
 
-        squares[i] = calcSquareMark(normalizeDistance)
+        squares[i] = self:calcSquareMark(normalizeDistance)
 
         if squares[i] == nil then
             table_bininsert(TempEmptySquares, {
@@ -133,13 +122,7 @@ local function markSquareRow(x0, x1, y, cx, cy, r)
     end
 end
 
-local function patchEmptySquares()
-    for _, square in ipairs(TempEmptySquares) do
-        print('square.d: '..square.d)        
-    end
-end
-
-local function generateExplosionCircle(cx, cy, radius)
+function ExplosionMatrix:generateExplosionCircle(cx, cy, radius)
     local x = radius - 1
     local y = 0
     local dx = 1
@@ -147,10 +130,10 @@ local function generateExplosionCircle(cx, cy, radius)
     local err = dx - lshift(radius, 1)
 
     while x >= y do
-        markSquareRow(cx + y, cx - y, cy - x, cx, cy, radius)
-        markSquareRow(cx + x, cx - x, cy - y, cx, cy, radius)
-        markSquareRow(cx + x, cx - x, cy + y, cx, cy, radius)
-        markSquareRow(cx + y, cx - y, cy + x, cx, cy, radius)
+        self:markSquareRow(cx + y, cx - y, cy - x, cx, cy, radius)
+        self:markSquareRow(cx + x, cx - x, cy - y, cx, cy, radius)
+        self:markSquareRow(cx + x, cx - x, cy + y, cx, cy, radius)
+        self:markSquareRow(cx + y, cx - y, cy + x, cx, cy, radius)
 
         if (err <= 0) then
             y = y + 1
@@ -170,14 +153,4 @@ local function generateExplosionCircle(cx, cy, radius)
     patchEmptySquares()
 end
 
-local exp = explosionsList[1]
-
-generateExplosionCircle(ceil(exp.x), ceil(exp.y), ceil(exp.r))
-
-local module = {
-    getExplosionMatrix = function()
-        return SquaresInExplosion
-    end
-}
-
-return module
+return ExplosionMatrix

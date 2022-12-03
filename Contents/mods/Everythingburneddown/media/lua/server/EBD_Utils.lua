@@ -20,6 +20,17 @@ local utils = {
         end
         table.insert(t, (iMid + iState), value)
         return (iMid + iState)
+    end,
+    normalize = function(val, max, min)
+        return (val - min) / (max - min)
+    end,
+    distanceFromCenterOfCircle = function(x, y, cx, cy)
+        local xCalc = (x - cx) ^ 2
+        local yCalc = (y - cy) ^ 2
+        return math.sqrt(xCalc + yCalc);
+    end,
+    lshift = function(x, by)
+        return x * 2 ^ by
     end
 }
 

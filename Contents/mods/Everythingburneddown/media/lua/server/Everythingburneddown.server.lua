@@ -1,5 +1,5 @@
-local ExplosionMatrix = require('ExplosionMatrix')
-local SquaresInExplosion = ExplosionMatrix.getExplosionMatrix()
+local ExplosionMatrix = require('EDB_ExplosionMatrix')
+local SquaresInExplosion = ExplosionMatrix:getSquaresInExplosion()
 
 local ModDataIgnoreKey = "MxBurnedDown"
 
@@ -7,6 +7,7 @@ local function BurnSquare(square, explosionEffect)
     square:getModData()[ModDataIgnoreKey] = true;
 
     -- Apprently it's needed because of Java shitting itself and randomly dumping "local2" error
+    -- This should not be necessary anymore
     if not IsoFire.CanAddFire(square, true) then
         return
     end
@@ -50,3 +51,16 @@ local function OnLoadGridSquare(square)
 end
 
 Events.LoadGridsquare.Add(OnLoadGridSquare);
+
+local explosionsList = {
+    { -- muldraugh https://map.projectzomboid.com/#10753x9943x1145
+        x = 10749,
+        y = 9944,
+        r = 100
+    }
+}
+
+local exp = explosionsList[1]
+
+local ceil = math.ceil
+ExplosionMatrix:generateExplosionCircle(ceil(exp.x), ceil(exp.y), ceil(exp.r))
