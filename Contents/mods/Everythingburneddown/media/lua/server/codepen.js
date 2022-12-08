@@ -6,65 +6,84 @@ function randomNum(max, min) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-let notRandom = 0
+//let notRandom = 0
 /* Overrides random gen, for debugging purpose */
-function randomNum(max, min) {
-  notRandom = (notRandom + 1) % 2
-  return min * (notRandom + 1)
-}
+// function randomNum(max, min) {
+//   notRandom = (notRandom + 1) % 2
+//   return min * (notRandom + 1)
+// }
 
 class PixelCircle {
-  constructor(ctx, cx, cy, r) {
+  constructor(ctx, cx, cy, r, steps = 0.03) {
     this.ctx = ctx;
     this.cx = cx;
     this.cy = cy;
     this.r = r;
+    this.steps = steps;
+    this.pixelMatrix = {};
     this.borderPixels = {};
     this.drawSelf();
   }
 
+  isInMatrix(x, y) {
+    return this.pixelMatrix[y] && this.pixelMatrix[y][x] || false
+  }
+
+  isOnBorder(x, y) {
+    return this.borderPixels[y] && this.borderPixels[y][x] || false
+  }
+
+  // Thank you to https://youtu.be/ZI1dmHv3MeM
   drawSelf() {
     const { cx, cy, r } = this;
-    let rngR = randomNum(Math.round(r * 1.5), r)
-    let prevX = Math.round(cx + (rngR * Math.cos(0)));
-    let prevY = Math.round(cy + (rngR * Math.sin(0)));
 
-    this.drawPixel(this.ctx, prevX, prevY, 'blue');
+    let prevX = 0
+    let prevY = 0
+    let firstX = 0
+    let firstY = 0
 
-    const firstX = prevX
-    const firstY = prevY
-    let x = 0
-    let y = 0
+    // this.steps = 0.1; // DEBUG OVERRIDE
 
-    const steps = 0.1; // 0.03 seems good
     const TWO_PI = Math.PI * 2
-
-    for (let a = steps; a < TWO_PI; a += steps) {
+    for (let a = 0; a < TWO_PI; a += this.steps) {
       let rngR = randomNum(Math.round(r * 1.8), r)
-      x = Math.round(cx + (rngR * Math.cos(a)));
-      y = Math.round(cy + (rngR * Math.sin(a)));
+      let x = Math.round(cx + (rngR * Math.cos(a)));
+      let y = Math.round(cy + (rngR * Math.sin(a)));
 
-      this.drawLine(x, y, prevX, prevY);
+      if (!(prevY == 0 && prevX == 0)) {
+        this.drawLine(x, y, prevX, prevY);
+      } else {
+        firstX = x;
+        firstY = y;
+      }
+
       this.drawPixel(x, y, 'red');
 
-      prevX = x;
-      prevY = y;
+      prevX = x
+      prevY = y
     }
 
-    this.drawLine(x, y, firstX, firstY);
+    this.drawLine(prevX, prevY, firstX, firstY);
 
-    console.log({...this})
+    console.log({ ...this })
 
-    this.fillCircle(this.cx, this.cy);
+    this.recursiveFill(this.cx, this.cy);
+  }
+
+  drawborder(x, y, fillColor) {
+    this.drawPixel(x, y, fillColor);
+    this.borderPixels[y] = this.borderPixels[y] || {};
+    this.borderPixels[y][x] = true;
   }
 
   drawPixel(x, y, fillColor) {
     this.ctx.fillStyle = fillColor || '#000';
     this.ctx.fillRect(x, y, 1, 1);
-    this.borderPixels[y] = this.borderPixels[y] || {};
-    this.borderPixels[y][x] = true;
+    this.pixelMatrix[y] = this.pixelMatrix[y] || {};
+    this.pixelMatrix[y][x] = true;
   }
 
+  // Thank you to https://stackoverflow.com/a/4672319/10300983
   drawLine(x0, y0, x1, y1, fillColor) {
     var dx = Math.abs(x1 - x0);
     var dy = Math.abs(y1 - y0);
@@ -83,17 +102,24 @@ class PixelCircle {
     }
   }
 
-  fillCircle(cx, cy) {
-    if (this.borderPixels[cy] && this.borderPixels[cy][cx]) {
+  recursiveFill(x, y, strayCount) {
+    if (!isNaN(strayCount)) {
+      strayCount = strayCount - 1;
+      if (strayCount == 0) {
+        return;
+      }
+    }
+
+    if (this.isInMatrix(x, y)) {
       return;
     }
 
-    this.drawPixel(cx, cy, 'green');
+    this.drawPixel(x, y, 'green');
 
-    this.fillCircle(cx + 1, cy);
-    this.fillCircle(cx - 1, cy);
-    this.fillCircle(cx, cy + 1);
-    this.fillCircle(cx, cy - 1);
+    this.recursiveFill(x + 1, y);
+    this.recursiveFill(x - 1, y);
+    this.recursiveFill(x, y + 1);
+    this.recursiveFill(x, y - 1);
   }
 }
 
