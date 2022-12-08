@@ -32,6 +32,7 @@ const fillCircle = ({ cx, cy, radius, matrix }) => {
         }
         console.clear()
         console.log(matrix.map((x) => x.join('')).join('\n'))
+        console.log({ x, y })
     }
 
     console.log(matrix.map((x) => x.join('')).join('\n'))
