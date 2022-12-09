@@ -42,7 +42,7 @@ class PixelCircle {
     let firstX = 0
     let firstY = 0
 
-    // this.steps = 0.1; // DEBUG OVERRIDE
+    // this.steps = 0.25; // DEBUG OVERRIDE
 
     const TWO_PI = Math.PI * 2
     for (let a = 0; a < TWO_PI; a += this.steps) {
@@ -51,29 +51,28 @@ class PixelCircle {
       let y = Math.round(cy + (rngR * Math.sin(a)));
 
       if (!(prevY == 0 && prevX == 0)) {
-        this.drawLine(x, y, prevX, prevY);
+        const vertices = [{ x, y }, { x: prevX, y: prevY }, { x: cx, y: cy }];
+        this.fillTriangle(vertices);
+        this.drawLine(x, y, prevX, prevY, 'red');
+        // this.drawLine(x, y, cx, cy);
+        // this.drawLine(prevX, prevY, cx, cy);
+
       } else {
         firstX = x;
         firstY = y;
       }
 
-      this.drawPixel(x, y, 'red');
-
       prevX = x
       prevY = y
     }
 
-    this.drawLine(prevX, prevY, firstX, firstY);
+    const vertices = [{ x: firstX, y: firstY }, { x: prevX, y: prevY }, { x: cx, y: cy }];
+    this.fillTriangle(vertices);
+    this.drawLine(firstX, firstY, prevX, prevY, 'red');
+    // this.drawLine(prevX, prevY, cx, cy);
+    // this.drawLine(firstX, firstY, cx, cy);
 
     console.log({ ...this })
-
-    this.recursiveFill(this.cx, this.cy);
-  }
-
-  drawborder(x, y, fillColor) {
-    this.drawPixel(x, y, fillColor);
-    this.borderPixels[y] = this.borderPixels[y] || {};
-    this.borderPixels[y][x] = true;
   }
 
   drawPixel(x, y, fillColor) {
@@ -83,8 +82,32 @@ class PixelCircle {
     this.pixelMatrix[y][x] = true;
   }
 
+  drawScanline(x0, y0, x1, y1) {
+    x0 = Math.round(x0);
+    y0 = Math.round(y0);
+    x1 = Math.round(x1);
+    y1 = Math.round(y1);
+    console.log({
+      x0,
+      y0,
+      x1,
+      y1,
+    })
+
+    const start = Math.min(x0, x1); 
+    const end = Math.max(x0, x1);
+
+    for (let i = start; i < end; i++) {
+      this.drawPixel(i, y0)
+    }
+  }
+
   // Thank you to https://stackoverflow.com/a/4672319/10300983
   drawLine(x0, y0, x1, y1, fillColor) {
+    x0 = Math.round(x0);
+    y0 = Math.round(y0);
+    x1 = Math.round(x1);
+    y1 = Math.round(y1);
     var dx = Math.abs(x1 - x0);
     var dy = Math.abs(y1 - y0);
     var sx = (x0 < x1) ? 1 : -1;
@@ -102,24 +125,49 @@ class PixelCircle {
     }
   }
 
-  recursiveFill(x, y, strayCount) {
-    if (!isNaN(strayCount)) {
-      strayCount = strayCount - 1;
-      if (strayCount == 0) {
-        return;
-      }
+  // Fill functions thanks to https://stackoverflow.com/a/49051355/10300983
+  fillTriangle(vertices) {
+    vertices.sort((a, b) => a.y - b.y);
+    if (vertices[1].y == vertices[2].y) {
+      this.fillBottomFlatTriangle(vertices[0], vertices[1], vertices[2]);
+    } else if (vertices[0].y == vertices[1].y) {
+      this.fillTopFlatTriangle(vertices[0], vertices[1], vertices[2]);
+    } else {
+      let v4 = {
+        x: vertices[0].x + (vertices[1].y - vertices[0].y) / (vertices[2].y - vertices[0].y) * (vertices[2].x - vertices[0].x),
+        y: vertices[1].y
+      };
+      this.fillBottomFlatTriangle(vertices[0], vertices[1], v4);
+      this.fillTopFlatTriangle(vertices[1], v4, vertices[2]);
     }
+  }
 
-    if (this.isInMatrix(x, y)) {
-      return;
+  fillBottomFlatTriangle(v1, v2, v3) {
+    let invslope1 = (v2.x - v1.x) / (v2.y - v1.y);
+    let invslope2 = (v3.x - v1.x) / (v3.y - v1.y);
+
+    let curx1 = v1.x;
+    let curx2 = v1.x;
+
+    for (let scanlineY = v1.y; scanlineY <= v2.y; scanlineY++) {
+      this.drawScanline(curx1, scanlineY, curx2, scanlineY);
+      curx1 += invslope1;
+      curx2 += invslope2;
     }
+  }
 
-    this.drawPixel(x, y, 'green');
+  fillTopFlatTriangle(v1, v2, v3) {
+    let invslope1 = (v3.x - v1.x) / (v3.y - v1.y);
+    let invslope2 = (v3.x - v2.x) / (v3.y - v2.y);
 
-    this.recursiveFill(x + 1, y);
-    this.recursiveFill(x - 1, y);
-    this.recursiveFill(x, y + 1);
-    this.recursiveFill(x, y - 1);
+    let curx1 = v3.x;
+    let curx2 = v3.x;
+
+    for (let scanlineY = v3.y; scanlineY > v1.y; scanlineY--) {
+      this.drawScanline(curx1, scanlineY, curx2, scanlineY);
+      curx1 -= invslope1;
+      curx2 -= invslope2;
+    }
   }
 }
 
